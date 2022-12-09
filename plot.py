@@ -1,5 +1,9 @@
+import warnings
+
 from matplotlib import pyplot as plt
 from wordcloud import WordCloud
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 
 def plot_genre_frequency(genres_frequency: dict[str, int]):

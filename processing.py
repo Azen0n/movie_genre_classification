@@ -1,5 +1,6 @@
 import json
 from collections import Counter
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from typing import TypedDict
@@ -67,7 +68,7 @@ def get_all_words_from_overviews_of_genre(genre: str, movies: list[Movie]):
     if not filtered_movies:
         return []
     overviews = [movie.overview for movie in filtered_movies]
-    return process_movie_overviews(overviews)
+    return process_movie_overview(' '.join(overviews))
 
 
 def get_all_movies_with_genre(genre: str, movies: list[Movie]) -> list[Movie]:
@@ -76,14 +77,35 @@ def get_all_movies_with_genre(genre: str, movies: list[Movie]) -> list[Movie]:
     return list(filtered_movies)
 
 
-def process_movie_overviews(overviews: list[str]) -> list[str]:
-    """Remove stopwords and split overviews in words."""
-    words = word_tokenize(' '.join(overviews))
-    lemmatized_words = []
+def process_movie_overview(overview: str) -> list[str]:
+    """Remove stopwords and split overview in words"""
+    processed_overview = []
+    words = word_tokenize(overview)
     for word, tag in pos_tag(words):
         if not word.isalpha() or word in stopwords:
             continue
         if tag[0].lower() in ['a', 'r', 'n', 'v']:
             lemma = lemmatizer.lemmatize(word.lower(), tag[0].lower())
-            lemmatized_words.append(lemma)
-    return lemmatized_words
+            processed_overview.append(lemma)
+    return processed_overview
+
+
+def get_genres(movies: list[Movie]) -> list[str]:
+    """Return list of unique genres."""
+    genre_frequency = count_genre_frequency(movies)
+    return list(genre_frequency.keys())
+
+
+def get_classification_dataframe(movies: list[Movie]) -> pd.DataFrame:
+    """Transform list of movies to dataframe with overviews
+    and genre matrix.
+    """
+    genres = {genre: 0 for genre in get_genres(movies)}
+    overview_genre_matrix = []
+    for movie in movies:
+        row = deepcopy(genres)
+        row['overview'] = ' '.join(process_movie_overview(movie.overview))
+        for genre in movie.genres:
+            row[genre['name']] = 1
+        overview_genre_matrix.append(row)
+    return pd.DataFrame(overview_genre_matrix)
